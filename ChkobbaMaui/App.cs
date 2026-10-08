@@ -1,0 +1,1 @@
+namespace ChkobbaMaui; public class App : Application { public App() => MainPage = new Views.GamePage(); }
