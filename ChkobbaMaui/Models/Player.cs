@@ -1,0 +1,1 @@
+namespace ChkobbaMaui.Models; public sealed class Player(string name) { public string Name { get; } = name; public List<Card> Hand { get; } = []; public List<Card> Captured { get; } = []; public int ChkobbaCount { get; set; } public int Score { get; set; } }
