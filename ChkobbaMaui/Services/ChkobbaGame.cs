@@ -1,0 +1,14 @@
+using ChkobbaMaui.Models; namespace ChkobbaMaui.Services;
+public sealed class ChkobbaGame {
+private readonly Random _random = new(); private List<Card> _deck = [];
+public Player Human { get; } = new("Vous"); public Player Cpu { get; } = new("Ordinateur"); public List<Card> Table { get; } = [];
+public string Message { get; private set; } = ""; public bool IsFinished { get; private set; } public event Action? Changed;
+public void Start() { Human.Hand.Clear(); Human.Captured.Clear(); Human.ChkobbaCount=Human.Score=0; Cpu.Hand.Clear(); Cpu.Captured.Clear(); Cpu.ChkobbaCount=Cpu.Score=0; Table.Clear(); IsFinished=false; _deck=Enum.GetValues<Suit>().SelectMany(s=>Enumerable.Range(1,10).Select(n=>new Card(s,n))).OrderBy(_=>_random.Next()).ToList(); Table.AddRange(_deck.Take(4)); _deck.RemoveRange(0,4); Deal(); Message="À vous de jouer."; Changed?.Invoke(); }
+public void Play(Card played,IReadOnlyList<Card> selected) { if(IsFinished||!Human.Hand.Contains(played)||selected.Any(c=>!Table.Contains(c))) return; if(selected.Count>0&&selected.Sum(c=>c.CaptureValue)!=played.CaptureValue){Message="La somme doit égaler votre carte.";Changed?.Invoke();return;} Human.Hand.Remove(played); if(selected.Count==0) Table.Add(played); else { foreach(var c in selected){Table.Remove(c);Human.Captured.Add(c);} Human.Captured.Add(played); if(Table.Count==0){Human.ChkobbaCount++;Message="Chkobba ! Vous avez vidé la table.";}else Message="Bonne prise !"; }
+if(Human.Hand.Count==0&&Cpu.Hand.Count==0){if(_deck.Count>0)Deal();else{Cpu.Captured.AddRange(Table);Table.Clear();Finish();Changed?.Invoke();return;}} CpuTurn();Changed?.Invoke(); }
+private void CpuTurn(){if(Cpu.Hand.Count==0){Message="À vous de jouer.";return;}var c=Cpu.Hand[0];var take=FindCapture(c);Cpu.Hand.Remove(c);if(take is null){Table.Add(c);Message="L’ordinateur pose une carte.";}else{foreach(var x in take){Table.Remove(x);Cpu.Captured.Add(x);}Cpu.Captured.Add(c);if(Table.Count==0){Cpu.ChkobbaCount++;Message="L’ordinateur fait une chkobba.";}else Message="L’ordinateur prend des cartes.";}}
+private List<Card>? FindCapture(Card c){for(var mask=1;mask<(1<<Table.Count);mask++){var group=Table.Where((_,i)=>(mask&(1<<i))!=0).ToList();if(group.Sum(x=>x.CaptureValue)==c.CaptureValue)return group;}return null;}
+private void Deal(){foreach(var p in new[]{Human,Cpu}){p.Hand.Clear();p.Hand.AddRange(_deck.Take(3));_deck.RemoveRange(0,Math.Min(3,_deck.Count));}}
+private void Finish(){IsFinished=true;Human.Score=ScorePlayer(Human);Cpu.Score=ScorePlayer(Cpu);Message=$"Partie terminée — Vous {Human.Score} : {Cpu.Score} Ordinateur.";}
+private static int ScorePlayer(Player p)=>p.ChkobbaCount+(p.Captured.Count(c=>c.Suit==Suit.Coins)>=6?1:0)+(p.Captured.Any(c=>c.Rank==7&&c.Suit==Suit.Coins)?1:0)+(p.Captured.Count(c=>c.Rank==7)>=3?1:0)+(p.Captured.Count>=21?1:0);
+}
